@@ -1,0 +1,56 @@
+# Copyright (c) 2026 Beken Corporation
+# SPDX-License-Identifier: Apache-2.0
+#
+# Visible symbols of the BK7258 series: bool + help, selectable by the user or
+# by a board.
+# ============================================================================
+#
+# This file has exactly three jobs:
+#   1. declare SOC_SERIES_BK7258 / SOC_BK7258 as visible bools (with help)
+#   2. give the default SOC_SERIES string
+#   3. give the default SOC string (the linker script and the build system
+#      locate the soc directory from it)
+# Dependencies such as select live in Kconfig in this directory (see the note
+# there on the division of labour).
+#
+# Same shape upstream: soc/nordic/nrf52/Kconfig.soc,
+# soc/focaltech/ft9001/Kconfig.soc
+# ============================================================================
+
+config SOC_SERIES_BK7258
+	bool
+	# BK7258 and BK7236 are the same die; the BK7236 only drops the
+	# multimedia interfaces, so both belong to the same series.
+	select SOC_FAMILY_BEKEN_ARM
+	help
+	  Beken BK7258 series.
+
+	  The application subsystem is a dual Cortex-M33 (up to 480 MHz, 120 MHz in
+	  the reference configuration) with a TrustZone-M secure state. Peripheral
+	  interrupts go straight to the NVIC (no cascaded ICU), peripheral registers
+	  live at 0x44000000..0x4B110000, and code is executed in place (XIP) from
+	  0x02000000.
+
+config SOC_SERIES
+	default "bk7258" if SOC_SERIES_BK7258
+
+config SOC_BK7258
+	bool
+	help
+	  Beken BK7258 SoC, application subsystem (Cortex-M33).
+
+config SOC
+	default "bk7258" if SOC_BK7258
+
+config SOC_BK7258_IPC_HEARTBEAT
+	bool "Report AP power-up and send a periodic heartbeat to CP (CPU0)"
+	help
+	  Send a POWER_UP indication (once) and a heartbeat (every 2 s) to CP over
+	  the mbox0 inter-core mailbox.
+
+	  CP runs a supervision state machine: 2 s after releasing the AP it prints
+	  "IPC retry to start core1" if no power-up indication arrived, and 6 s
+	  without a heartbeat resets the whole chip. With the official bootloader
+	  and official CP firmware this option must therefore stay enabled, or
+	  Zephyr gets reset by CP about 8 s after boot and the console never shows
+	  any AP output.

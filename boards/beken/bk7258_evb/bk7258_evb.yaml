@@ -1,0 +1,20 @@
+# Copyright (c) 2026 Beken Corporation
+# SPDX-License-Identifier: Apache-2.0
+#
+# twister test metadata
+#
+# There is no flash or debug runner for this board, so "flash" and "debug" are
+# deliberately absent from supported: twister would otherwise try to use them.
+
+identifier: bk7258_evb
+name: Beken BK7258 EVB
+type: mcu
+arch: arm
+toolchain:
+  - zephyr
+  - cross-compile
+ram: 256
+flash: 1156
+supported:
+  - uart
+vendor: beken

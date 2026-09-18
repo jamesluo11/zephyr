@@ -1,0 +1,82 @@
+# Copyright (c) 2026 Beken Corporation
+# SPDX-License-Identifier: Apache-2.0
+#
+# Dependency declarations for the BK7258 series: select only, no type, no help.
+# ============================================================================
+#
+# Same shape upstream: soc/nordic/nrf52/Kconfig, soc/focaltech/ft9001/Kconfig
+#
+# Division of labour (keep it, or upstream CI will object):
+#     this file          -> select only (pull in the CPU / architecture
+#                           capabilities this SoC needs)
+#     Kconfig.soc        -> bool + help (visible, selectable symbols) plus the
+#                           SOC / SOC_SERIES strings
+#     Kconfig.defconfig  -> defaults wrapped in if SOC_xxx
+#
+# Why no bool/help here: a symbol's type may only appear once. Splitting the
+# select and the bool across two files (Kconfig / Kconfig.soc) is the standard
+# Zephyr HWMv2 arrangement, keeping the CMake and Kconfig concerns apart.
+# ============================================================================
+
+config SOC_SERIES_BK7258
+	# Cortex-M33 architecture capabilities. CPU_CORTEX_M33 already selects
+	# CPU_CORTEX_M / ARMV8_M_MAINLINE itself
+	# (arch/arm/core/cortex_m/Kconfig:57), so do not repeat them here: the
+	# upstream compliance check reports redundant selects.
+	select CPU_CORTEX_M33
+
+	# Architecture root symbol. CPU_CORTEX_M only selects CPU_CORTEX; ARM has
+	# to be pulled in by the SoC itself (compare select ARM in
+	# soc/nordic/nrf52/Kconfig).
+	select ARM
+
+	# ------------------------------------------------------------------
+	# TrustZone-M is deliberately NOT selected; see below (hit during the
+	# first real build on 2026-09-17)
+	# ------------------------------------------------------------------
+	#
+	# Hardware fact: the BK7258 application subsystem runs in the TrustZone
+	# secure state (the vendor reference build enables the secure
+	# processing environment).
+	#
+	# "The CPU runs in the secure state" is not the same as "Zephyr should
+	# enable ARM_TRUSTZONE_M". In Zephyr, ARM_TRUSTZONE_M means Zephyr takes
+	# part in managing the S/NS split (programming SAU/IDAU, SG transitions,
+	# secure and non-secure memory partitioning). An ordinary image that runs
+	# in the secure state without TZ enabled is perfectly viable and common:
+	# the secure state already has full privileges, so Zephyr needs to
+	# configure nothing extra. Bringing up the console does not require Zephyr
+	# to manage TZ.
+	#
+	# Dependency chain (measured against Zephyr 4.4.2):
+	#     ARM_TRUSTZONE_M  depends on  CPU_HAS_TEE && ARMV8_M_SE
+	#                                 && CPU_CORTEX_M && ARM
+	#     CPU_HAS_TEE      <- CPU_HAS_ARM_SAU / CPU_HAS_NRF_IDAU
+	#                         (arch/Kconfig:830; arch/arm/Kconfig:181/187)
+	#     ARMV8_M_SE       <- inside each CPU_CORTEX_Mxx symbol,
+	#                         `select ARMV8_M_SE if CPU_HAS_TEE`
+	#                         (arch/arm/core/cortex_m/Kconfig:53/61/70/81/92)
+	# CPU_HAS_TEE is the gate: without it ARMV8_M_SE is never selected by the
+	# CPU symbol and the dependencies of ARM_TRUSTZONE_M stay n forever.
+	#
+	# Selecting the leaf symbol directly produces exactly this:
+	#     warning: ARM_TRUSTZONE_M has direct dependencies
+	#       CPU_HAS_TEE && ARMV8_M_SE && CPU_CORTEX_M && ARM with value n,
+	#       but is currently being y-selected by the following symbols:
+	#         - SOC_SERIES_BK7258
+	#     error: Aborting due to Kconfig warnings
+	# (Zephyr treats Kconfig warnings as errors, so the build stops.)
+	#
+	# The correct way to enable TZ later is NOT to select ARM_TRUSTZONE_M:
+	#       select CPU_HAS_ARM_SAU              # an M33 with TZ has an SAU
+	# or, closer to upstream semantics:
+	#       select TRUSTED_EXECUTION_SECURE     # secure-state image
+	#       # or select TRUSTED_EXECUTION_NONSECURE
+	# Those select CPU_HAS_TEE, which lets CPU_CORTEX_M33 select ARMV8_M_SE,
+	# and only then do ARM_TRUSTZONE_M's dependencies hold.
+	#
+	# This belongs to the security subsystem work (stage 6 of the plan), not to
+	# the initial bring-up.
+
+config SOC_BK7258
+	select SOC_SERIES_BK7258

@@ -1,0 +1,132 @@
+/*
+ * Copyright (c) 2026 Beken Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#include <arm/armv8-m.dtsi>
+
+/*
+ * The NVIC priority field is 3 bits wide.
+ *
+ * armv8-m.dtsi only supplies a skeleton for the nvic node, while the
+ * arm,v8m-nvic binding marks 'arm,num-irq-priority-bits' as required, so the
+ * value has to be stated here for every ARMv8-M SoC. There is no matching
+ * Kconfig symbol: Zephyr defines NUM_IRQ_PRIO_BITS directly from devicetree.
+ *
+ * Sources for the value 3: the CMSIS device header of the vendor SDK
+ * (__NVIC_PRIO_BITS = 3U), and the BK7236/BK7234, which share the same die.
+ */
+&nvic {
+	arm,num-irq-priority-bits = <3>;
+};
+
+/ {
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		cpu0: cpu@0 {
+			device_type = "cpu";
+			compatible = "arm,cortex-m33";
+			reg = <0>;
+			clock-frequency = <120000000>;
+		};
+	};
+
+	/*
+	 * SRAM available to the application core.
+	 *
+	 * The SoC has 640 KB of SRAM in total, but it is split between the two
+	 * cores and only part of it belongs to the application core. The
+	 * bootloader places the application image's data in this region.
+	 *
+	 * 256 KB is claimed here, which is the part already verified to be
+	 * usable. It can be grown once the other core's usage is fully
+	 * characterised.
+	 */
+	sram0: memory@28010000 {
+		compatible = "mmio-sram";
+		reg = <0x28010000 0x40000>;
+	};
+
+	/*
+	 * Code region (XIP window).
+	 *
+	 * Zephyr puts the vector table at the start of this region, so offset 0
+	 * of the objcopy -O binary output is the start of the application slot
+	 * in flash and can be programmed directly.
+	 *
+	 * soc-nv-flash is enough because fetches from this window are handled
+	 * by hardware: no flash controller driver is involved in running code
+	 * from here.
+	 */
+	flash0: flash@2150000 {
+		compatible = "soc-nv-flash";
+		reg = <0x02150000 0x121000>;   /* 1156 KB */
+		erase-block-size = <0x1000>;
+		write-block-size = <4>;
+	};
+
+	/* 26 MHz on-board crystal */
+	xtal26m: clock-xtal26m {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <26000000>;
+	};
+
+	soc {
+		/*
+		 * UART0: the console.
+		 *   base      0x44820000
+		 *   NVIC IRQ  4
+		 *   pins      GPIO11 = TX, GPIO10 = RX, function 0
+		 *
+		 * On this board UART0 is driven by the other core, which has
+		 * already configured it; see CONFIG_UART_BK7258_NO_HW_INIT.
+		 */
+		uart0: serial@44820000 {
+			compatible = "beken,bk7258-uart";
+			reg = <0x44820000 0x1000>;
+			interrupts = <4 0>;
+			clock-frequency = <26000000>;
+			current-speed = <115200>;
+			clock-source = "xtal";
+			tx-pin = <11>;
+			rx-pin = <10>;
+			tx-func = <0>;
+			rx-func = <0>;
+			status = "disabled";   /* enabled by the board dts */
+		};
+
+		/* UART1: 0x45830000, IRQ 15, GPIO0 = TX / GPIO1 = RX */
+		uart1: serial@45830000 {
+			compatible = "beken,bk7258-uart";
+			reg = <0x45830000 0x1000>;
+			interrupts = <15 0>;
+			clock-frequency = <26000000>;
+			current-speed = <115200>;
+			clock-source = "xtal";
+			tx-pin = <0>;
+			rx-pin = <1>;
+			tx-func = <0>;
+			rx-func = <0>;
+			status = "disabled";
+		};
+
+		/* UART2: 0x45840000, IRQ 16, GPIO31 = TX / GPIO30 = RX */
+		uart2: serial@45840000 {
+			compatible = "beken,bk7258-uart";
+			reg = <0x45840000 0x1000>;
+			interrupts = <16 0>;
+			clock-frequency = <26000000>;
+			current-speed = <115200>;
+			clock-source = "xtal";
+			tx-pin = <31>;
+			rx-pin = <30>;
+			tx-func = <0>;
+			rx-func = <0>;
+			status = "disabled";
+		};
+	};
+};

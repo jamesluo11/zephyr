@@ -1,0 +1,27 @@
+# Copyright (c) 2026 Beken Corporation
+# SPDX-License-Identifier: Apache-2.0
+#
+# Entry point for the SoC-level "visible symbols".
+# ----------------------------------------------------------------------------
+# Sourced directly by the generated osource "<vendor>/Kconfig.soc" (see the
+# comment at the top of Kconfig in this directory).
+#
+# Division of labour (compare soc/nordic, soc/focaltech):
+#   Kconfig            <- select only (dependency declarations), no bool/help
+#   Kconfig.soc        <- bool + help (user visible, selectable) plus the
+#                         SOC / SOC_SERIES strings
+#   Kconfig.defconfig  <- defaults wrapped in if <symbol>
+#
+# Keeping the three apart is a hard requirement of upstream review: Kconfig.soc
+# only holds things that can be selected, and dependencies live in Kconfig, so
+# you never end up with an invisible symbol that carries a 'depends on'.
+
+config SOC_FAMILY_BEKEN_ARM
+	bool
+	help
+	  Beken SoC family based on ARM Cortex-M.
+
+config SOC_FAMILY
+	default "beken" if SOC_FAMILY_BEKEN_ARM
+
+rsource "*/Kconfig.soc"

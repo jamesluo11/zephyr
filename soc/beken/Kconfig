@@ -1,0 +1,42 @@
+# Copyright (c) 2026 Beken Corporation
+# SPDX-License-Identifier: Apache-2.0
+#
+# Kconfig entry point for the Beken SoC family.
+# ============================================================================
+#
+# How HWMv2 assembles this (checked entry by entry against a real Zephyr 4.4.2
+# tree and run there, 2026-09-17):
+#
+# cmake/modules/hwm_v2.cmake runs scripts/list_hardware.py over every SOC_ROOT
+# and, for the directory holding this file (the vendor root), generates
+#
+#       osource "<this directory>/Kconfig"
+#       osource "<this directory>/Kconfig.defconfig"
+#       osource "<this directory>/Kconfig.soc"
+#       osource "<this directory>/Kconfig.sysbuild"
+#
+# In other words Zephyr only sources those four files directly, and only from
+# the vendor root. Files in sub-directories (series / soc) have to be pulled in
+# from one of the four with rsource or they never take effect. This is the
+# easiest trap to fall into and it reports nothing at all (bk7258's
+# Kconfig.defconfig was completely inert because of it).
+#
+# Same shape upstream, see soc/focaltech, soc/nordic, soc/silabs:
+#      Kconfig            <- family symbols + rsource "*/Kconfig"
+#      Kconfig.soc        <- rsource "*/Kconfig.soc"
+#      Kconfig.defconfig  <- rsource "*/Kconfig.defconfig"
+#
+# rsource supports globs (scripts/kconfig/kconfiglib.py:398), so "*/Kconfig"
+# picks up the same-named file in every series sub-directory.
+# ============================================================================
+
+# SoC family symbol, selected in reverse by the series (bk7258).
+# Family-wide configuration, if it is ever needed, goes under
+# if SOC_FAMILY_BEKEN_ARM.
+# Dependency declarations from each series (select only, no type or prompt).
+#
+# This is deliberately not wrapped in "if SOC_FAMILY_BEKEN_ARM": the series
+# Kconfig.soc selects the family, so wrapping the series' selects in the family
+# condition makes the two symbols depend on each other and kconfig reports a
+# dependency loop.
+rsource "*/Kconfig"

@@ -1,0 +1,52 @@
+# Copyright (c) 2026 Beken Corporation
+# SPDX-License-Identifier: Apache-2.0
+#
+# BK7258 SoC defaults
+#
+# Only SoC-level defaults that do not depend on a particular board belong here.
+# Board differences (console, pins) go in the board files.
+
+if SOC_BK7258
+
+# Interrupts from the application subsystem go straight to the NVIC; there is no
+# cascaded interrupt controller. 64 lines in total.
+config NUM_IRQS
+	default 64
+
+# Code executes in place from flash (XIP) and is not copied to SRAM. The window
+# is handled by hardware, so no flash controller driver is involved in running
+# code.
+config XIP
+	default y
+
+# The image starts at the beginning of the zephyr,flash region.
+config FLASH_LOAD_OFFSET
+	default 0x0
+
+# The bootloader leaves the CPU clock at 120 MHz. If a different bootloader
+# configures another frequency, the system clock and every timeout move with it.
+config SYS_CLOCK_HW_CYCLES_PER_SEC
+	default 120000000
+
+# No MPU for now: the Cortex-M33 on this SoC isolates with TrustZone rather than
+# with a bare MPU, and a mis-configured MPU region tends to HardFault early,
+# which hides the real problem.
+config ARM_MPU
+	default n
+
+# The application subsystem has no peripheral clock-gating registers of its own
+# (the vendor power-up helpers are empty for this SoC), so no clock control
+# driver is used.
+config CLOCK_CONTROL
+	default n
+
+# Report "powered up" plus a periodic heartbeat to CPU0 (soc_ipc.c).
+#
+# This has to stay on with the vendor bootloader and firmware: CPU0 waits 2 s
+# for the power-up indication after releasing this core, and then 6 s between
+# heartbeats, before it resets the whole chip. Without it the board reboots over
+# and over with no application output at all.
+config SOC_BK7258_IPC_HEARTBEAT
+	default y
+
+endif # SOC_BK7258

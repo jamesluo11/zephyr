@@ -1,0 +1,29 @@
+# Copyright (c) 2026 Beken Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+config UART_BK7258
+	bool "Beken BK7258 UART driver"
+	default y
+	depends on DT_HAS_BEKEN_BK7258_UART_ENABLED
+	select SERIAL_HAS_DRIVER
+	help
+	  UART driver for the Beken BK7258 application subsystem, polled mode.
+
+	  Only poll_in / poll_out / err_check are implemented.
+	  CONFIG_UART_INTERRUPT_DRIVEN is not supported yet.
+
+config UART_BK7258_NO_HW_INIT
+	bool "Do not initialise the UART hardware"
+	depends on UART_BK7258
+	help
+	  With this set, driver init only registers the device and writes no
+	  register at all; transmit and receive go straight to the FIFO.
+
+	  This exists for UART ports that another core configured before this
+	  image started, and that this image is only allowed to borrow. On such a
+	  port the full init sequence (soft reset, pin muxing, rewriting config
+	  and clk_div) breaks the other core's console mid-line, after which the
+	  port stays silent and the board looks dead.
+
+	  Only boards whose wiring really is like that should select it. Boards
+	  that own the UART outright should leave it off and get the normal init.
