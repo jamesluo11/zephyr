@@ -249,3 +249,5 @@ if(CONFIG_SOC_FLASH_BFLB)
     LOCATION RAM NOKEEP
   )
 endif()
+
+zephyr_library_sources_ifdef(CONFIG_FLASH_BK7258 flash_bk7258.c)
